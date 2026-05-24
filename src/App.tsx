@@ -9,6 +9,7 @@ export default function App() {
   const [steps, setSteps] = useState<AgentStep[]>([]);
   const [itinerary, setItinerary] = useState("");
   const [isRunning, setIsRunning] = useState(false);
+  const [activeTab, setActiveTab] = useState<"reasoning" | "itinerary">("reasoning");
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,12 +21,14 @@ export default function App() {
     setSteps([]);
     setItinerary("");
     setIsRunning(true);
+    setActiveTab("reasoning");
 
     try {
       await runRoadTripPlanner(input, (step) => {
         setSteps(prev => [...prev, step]);
         if (step.type === "done") {
           setItinerary(step.itinerary);
+          setActiveTab("itinerary");
         }
       });
     } catch (err) {
@@ -37,7 +40,7 @@ export default function App() {
 
   return (
     <div style={{
-      height: "100vh",
+      height: "100dvh",
       display: "flex",
       flexDirection: "column",
       background: "#11111b",
@@ -45,19 +48,19 @@ export default function App() {
     }}>
       {/* Header */}
       <div style={{
-        padding: "16px 24px",
+        padding: "12px 16px",
         background: "#1e1e2e",
         borderBottom: "1px solid #313244",
         display: "flex",
         alignItems: "center",
-        gap: "12px"
+        gap: "10px"
       }}>
-        <span style={{ fontSize: "24px" }}>🚗</span>
+        <span style={{ fontSize: "22px" }}>🚗</span>
         <div>
-          <h1 style={{ margin: 0, color: "#cdd6f4", fontSize: "20px" }}>
+          <h1 style={{ margin: 0, color: "#cdd6f4", fontSize: "17px" }}>
             Weekend Road Trip Planner
           </h1>
-          <p style={{ margin: 0, color: "#6c7086", fontSize: "13px" }}>
+          <p style={{ margin: 0, color: "#6c7086", fontSize: "12px" }}>
             Powered by Claude AI
           </p>
         </div>
@@ -65,83 +68,106 @@ export default function App() {
 
       {/* Input bar */}
       <div style={{
-        padding: "16px 24px",
+        padding: "12px 16px",
         background: "#181825",
         borderBottom: "1px solid #313244",
         display: "flex",
-        gap: "12px"
+        gap: "8px"
       }}>
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handlePlan()}
-          placeholder="e.g. Weekend trip from Detroit, I love hiking and good food, budget $500"
+          placeholder="e.g. Trip from Detroit, love hiking, budget $500"
           style={{
             flex: 1,
-            padding: "12px 16px",
+            padding: "10px 12px",
             background: "#1e1e2e",
             border: "1px solid #313244",
             borderRadius: "8px",
             color: "#cdd6f4",
-            fontSize: "15px",
-            outline: "none"
+            fontSize: "14px",
+            outline: "none",
+            minWidth: 0
           }}
         />
         <button
           onClick={handlePlan}
           disabled={isRunning || !input.trim()}
           style={{
-            padding: "12px 24px",
+            padding: "10px 16px",
             background: isRunning ? "#313244" : "#89b4fa",
             color: isRunning ? "#6c7086" : "#11111b",
             border: "none",
             borderRadius: "8px",
-            fontSize: "15px",
+            fontSize: "14px",
             fontWeight: 600,
-            cursor: isRunning ? "not-allowed" : "pointer"
+            cursor: isRunning ? "not-allowed" : "pointer",
+            whiteSpace: "nowrap"
           }}
         >
-          {isRunning ? "Planning..." : "Plan My Trip"}
+          {isRunning ? "Planning..." : "Plan Trip"}
         </button>
       </div>
 
-      {/* Main panels */}
+      {/* Tabs */}
       <div style={{
-        flex: 1,
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        overflow: "hidden"
+        display: "flex",
+        background: "#181825",
+        borderBottom: "1px solid #313244"
       }}>
-        {/* Left: Agent reasoning */}
-        <div style={{ borderRight: "1px solid #313244", overflow: "hidden" }}>
-          <div style={{
-            padding: "12px 16px",
-            background: "#181825",
-            borderBottom: "1px solid #313244",
-            color: "#89b4fa",
+        <button
+          onClick={() => setActiveTab("reasoning")}
+          style={{
+            flex: 1,
+            padding: "10px",
+            background: "none",
+            border: "none",
+            borderBottom: activeTab === "reasoning"
+              ? "2px solid #89b4fa"
+              : "2px solid transparent",
+            color: activeTab === "reasoning" ? "#89b4fa" : "#6c7086",
             fontSize: "13px",
-            fontWeight: 600
-          }}>
-            AGENT REASONING
-          </div>
-          <ChatPanel steps={steps} isRunning={isRunning} />
-          <div ref={chatBottomRef} />
-        </div>
+            fontWeight: 600,
+            cursor: "pointer"
+          }}
+        >
+          AGENT REASONING
+          {isRunning && " ⏳"}
+        </button>
+        <button
+          onClick={() => setActiveTab("itinerary")}
+          style={{
+            flex: 1,
+            padding: "10px",
+            background: "none",
+            border: "none",
+            borderBottom: activeTab === "itinerary"
+              ? "2px solid #a6e3a1"
+              : "2px solid transparent",
+            color: activeTab === "itinerary" ? "#a6e3a1" : "#6c7086",
+            fontSize: "13px",
+            fontWeight: 600,
+            cursor: "pointer"
+          }}
+        >
+          YOUR ITINERARY
+          {itinerary && " ✅"}
+        </button>
+      </div>
 
-        {/* Right: Itinerary */}
-        <div style={{ overflow: "hidden" }}>
-          <div style={{
-            padding: "12px 16px",
-            background: "#181825",
-            borderBottom: "1px solid #313244",
-            color: "#a6e3a1",
-            fontSize: "13px",
-            fontWeight: 600
-          }}>
-            YOUR ITINERARY
+      {/* Content */}
+      <div style={{ flex: 1, overflow: "hidden" }}>
+        {activeTab === "reasoning" ? (
+          <div style={{ height: "100%", overflowY: "auto" }}>
+            <ChatPanel steps={steps} isRunning={isRunning} />
+            <div ref={chatBottomRef} />
           </div>
-          <ItineraryPanel itinerary={itinerary} />
-        </div>
+        ) : (
+          <div style={{ height: "100%", overflowY: "auto" }}>
+            <ItineraryPanel itinerary={itinerary} />
+          </div>
+        )}
       </div>
     </div>
   );
