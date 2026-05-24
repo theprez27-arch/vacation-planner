@@ -1,6 +1,14 @@
 import { getRealWeatherForecast } from "./weatherApi";
 import { getRealDriveTime } from "./mapsApi";
 
+async function callPlacesAPI(query: string, location: string) {
+  const res = await fetch(
+    `/api/places?query=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`
+  );
+  const data = await res.json();
+  return data.results;
+}
+
 export async function handleToolCall(name: string, input: any): Promise<any> {
   await new Promise(r => setTimeout(r, 800));
 
@@ -9,59 +17,37 @@ export async function handleToolCall(name: string, input: any): Promise<any> {
       return await getRealDriveTime(input.origin, input.destination);
 
     case "search_activities":
+      const activityQuery = `${input.interests?.join(" ")} activities attractions ${input.destination}`;
+      const activities = await callPlacesAPI(activityQuery, input.destination);
       return {
         destination: input.destination,
-        activities: [
-          {
-            name: "Sleeping Bear Dunes National Lakeshore",
-            type: "outdoor",
-            description: "Massive sand dunes overlooking Lake Michigan with incredible views.",
-            cost_per_person: 20,
-            recommended_duration: "3-4 hours"
-          },
-          {
-            name: "Crystal River Kayaking",
-            type: "outdoor",
-            description: "Paddle a crystal clear river through the woods. Rentals available.",
-            cost_per_person: 45,
-            recommended_duration: "2-3 hours"
-          },
-          {
-            name: "Local State Park Trails",
-            type: "hiking",
-            description: "Well marked trails through forests and along scenic overlooks.",
-            cost_per_person: 10,
-            recommended_duration: "2 hours"
-          }
-        ]
+        activities: activities.map((p: any) => ({
+          name: p.name,
+          address: p.address,
+          rating: p.rating,
+          total_ratings: p.total_ratings,
+          cost_estimate: p.price_level
+            ? "$".repeat(p.price_level)
+            : "Free or varies",
+          open_now: p.open_now
+        }))
       };
 
     case "search_dining":
+      const diningQuery = `${input.cuisine_preference || "restaurants"} ${input.destination}`;
+      const dining = await callPlacesAPI(diningQuery, input.destination);
       return {
         destination: input.destination,
-        restaurants: [
-          {
-            name: "The Riverside Grille",
-            cuisine: "American/Seafood",
-            price_range: "$$",
-            rating: 4.6,
-            must_try: "Whitefish tacos"
-          },
-          {
-            name: "Joe's Diner",
-            cuisine: "Classic American",
-            price_range: "$",
-            rating: 4.3,
-            must_try: "Breakfast skillet"
-          },
-          {
-            name: "Moomers Homemade Ice Cream",
-            cuisine: "Dessert",
-            price_range: "$",
-            rating: 4.8,
-            must_try: "Seasonal fruit flavors"
-          }
-        ]
+        restaurants: dining.map((p: any) => ({
+          name: p.name,
+          address: p.address,
+          rating: p.rating,
+          total_ratings: p.total_ratings,
+          price_range: p.price_level
+            ? "$".repeat(p.price_level)
+            : "Unknown",
+          open_now: p.open_now
+        }))
       };
 
     case "get_weather_forecast":
